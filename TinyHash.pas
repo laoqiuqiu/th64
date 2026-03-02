@@ -2,54 +2,74 @@ unit TinyHash;
 
 interface
 
-function th64(const Data: Pointer; const Len: NativeUInt; const Seed: UInt64): UInt64;
+function th64(const Data; const Len: NativeUInt; const Seed: UInt64; const I: NativeUInt = 5): UInt64;
 
 implementation
 
+
+function th64(const Data; const Len: NativeUInt; const Seed: UInt64; const I: NativeUInt = 5): UInt64;
+const
+  R: array[0..39] of UInt64 = (
+    $7FB5D329728EA185, $81DADEF4BC2DD44D, $64DD81482CBD31D7, $E36AA5C613612997, $99BCF6822B23CA35, $14020A57ACCED8B7, $62A9D9ED799705F5, $CB24D0A5C88C35B3,
+    $79C135C1674B9ADD, $54C77C86F6913E45, $69B0BC90BD9A8C49, $3D5E661A2A77868D, $16A6AC37883AF045, $CC9C31A4274686A5, $294AA62849912F0B, $0A9BA9C8A5B15117,
+    $4CD6944C5CC20B6D, $FC12C5B19D3259E9, $E4C7E495F4C683F5, $FDA871BAEA35A293, $97D461A8B11570D9, $02271EB7C6C4CD6B, $3CD0EB9D47532DFB, $63660277528772BB,
+    $BF58476D1CE4E5B9, $94D049BB133111EB, $4BE98134A5976FD3, $3BC0993A5AD19A13, $FF51AFD7ED558CCD, $C4CEB9FE1A85EC53, $9E3779B185EBCA87, $C2B2AE3D27D4EB4F,
+    $165667B19E3779F9, $85EBCA77C2B2AE63, $27D4EB2F165667C5, $BEA225F9EB34556D, $0E9846AF9B1A615D, $DABA0B6EB09322E3, $D6E8FEB86659FD93, $9E6D62D06F6A9A9B
+  );
+  //R = $14020A57ACCED8B7;
+
+var
+  P, E: PByte;
+  X, H: UInt64;
+begin
 {$IFOPT Q+}
+{$DEFINE OVERFLOWCHECKS_OFF}
 {$OVERFLOWCHECKS OFF}
 {$ENDIF}
 
 {$IFOPT R+}
+{$DEFINE RANGECHECKS_OFF}
 {$RANGECHECKS OFF}
 {$ENDIF}
-
-
-function th64(const Data: Pointer; const Len: NativeUInt; const Seed: UInt64): UInt64;
-const
-  R: UInt64 = $14020A57ACCED8B7;
-var
-  P1, P2: PByte;
-  X, H: UInt64;
-begin
   Result := 0;
-  P1 := Data;
-  P2 := P1;
-  Inc(P2, Len);
-  H := Seed;
-  while (P1 + 8) <= P2 do
-  begin
-    X := PUInt64(P1)^;
-    Inc(P1, 8);
 
-    X := X * R;
+  P := @Data;
+  E := P + Len;
+  H := Seed;
+
+  while (P + 8) <= E do
+  begin
+    X := PUInt64(P)^;
+    Inc(P, 8);
+
+    X := X * R[I];
     X := X shl 31 or X shr 33;
-    H := H * R xor X;
+    H := H * R[I] xor X;
     H := H shl 31 or H shr 33;
   end;
-  while P1 < P2 do
+
+  while P < E do
   begin
-    H := H * R xor P1^;
-    Inc(P1);
+    H := H * R[I] xor P^;
+    Inc(P);
   end;
-  H := H * R + Len;
+
+  H := H * R[I] + Len;
   H := H xor (H shr 31);
-  H := H * R;
+  H := H * R[I];
   H := H xor (H shr 31);
-  H := H * R;
+  H := H * R[I];
   H := H xor (H shr 31);
-  H := H * R;
+  H := H * R[I];
   Result := H;
+{$IFDEF OVERFLOWCHECKS_OFF}
+  {$RANGECHECKS ON}
+  {$UNDEF OVERFLOWCHECKS_OFF}
+{$ENDIF}
+{$IFDEF RANGECHECKS_OFF}
+  {$OVERFLOWCHECKS ON}
+  {$UNDEF RANGECHECKS_OFF}
+{$ENDIF}
 end;
 
 end.
